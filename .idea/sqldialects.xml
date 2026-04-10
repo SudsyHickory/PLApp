@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/main-app/src/main/resources/db/migration/V1__init_migration.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/main-app/src/main/resources/db/migration/V2__insert_matchdays.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/main-app/src/main/resources/db/migration/V3__teams-table-init.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/main-app/src/main/resources/db/migration/V4__match_team_relation.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/main-app/src/main/resources/db/migration/V5__added_team_points.sql" dialect="GenericSQL" />
+  </component>
+</project>
