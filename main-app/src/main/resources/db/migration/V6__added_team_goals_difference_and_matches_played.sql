@@ -1,0 +1,3 @@
+ALTER TABLE teams_table ADD COLUMN goals_difference INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE teams_table ADD COLUMN matches_played INTEGER NOT NULL DEFAULT 0;

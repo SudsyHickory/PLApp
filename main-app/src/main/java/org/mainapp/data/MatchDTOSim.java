@@ -12,9 +12,13 @@ public class MatchDTOSim {
 
     private int homeTeamGoals;
 
+    private String homeTeamCrest;
+
     private String awayTeam;
 
     private int awayTeamGoals;
+
+    private String awayTeamCrest;
 
     private int currentMinute;
 
@@ -35,9 +39,27 @@ public class MatchDTOSim {
         this.awayTeam = match.getAwayTeam().getShortName();
         this.homeTeamGoals = match.getHomeTeamGoals();
         this.awayTeamGoals= match.getAwayTeamGoals();
+        this.homeTeamCrest = match.getHomeTeam().getCrest();
+        this.awayTeamCrest = match.getAwayTeam().getCrest();
         this.currentMinute = match.getCurrentMinute();
         this.matchday = match.getMatchday().getWeekId();
         this.status = match.getStatus();
+    }
+
+    public String getHomeTeamCrest() {
+        return homeTeamCrest;
+    }
+
+    public void setHomeTeamCrest(String homeTeamCrest) {
+        this.homeTeamCrest = homeTeamCrest;
+    }
+
+    public String getAwayTeamCrest() {
+        return awayTeamCrest;
+    }
+
+    public void setAwayTeamCrest(String awayTeamCrest) {
+        this.awayTeamCrest = awayTeamCrest;
     }
 
     public Long getId() {

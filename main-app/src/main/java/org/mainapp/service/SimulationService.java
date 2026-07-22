@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -125,9 +127,22 @@ public class SimulationService {
         saveTeamToBonusCache(homeTeamName, pointsToAdd.getFirst());
         saveTeamToBonusCache(awayTeamName, pointsToAdd.getSecond());
 
+        int homeGd = currentMatch.getHomeTeamGoals() - currentMatch.getAwayTeamGoals();
+        saveTeamGoalDifferenceToBonusCache(homeTeamName, homeGd);
+        saveTeamGoalDifferenceToBonusCache(awayTeamName, -homeGd);
+
         stringRedisTemplate.opsForZSet().unionAndStore("table:official","table:live-bonus", "table:live");
+        stringRedisTemplate.opsForZSet().unionAndStore("table:official-gd","table:live-bonus-gd", "table:live-gd");
+
         Set<ZSetOperations.TypedTuple<String>> ranking = stringRedisTemplate.opsForZSet().reverseRangeWithScores("table:live", 0, -1);
-        List<DtoTeam> teams = teamsService.deserializationRanking(ranking);
+        Set<ZSetOperations.TypedTuple<String>> gdRanking = stringRedisTemplate.opsForZSet().rangeWithScores("table:live-gd", 0, -1);
+
+        Map<String,Integer> goalsDifferenceByTeam = new HashMap<>();
+        for (ZSetOperations.TypedTuple<String> team : gdRanking) {
+            goalsDifferenceByTeam.put(team.getValue(), team.getScore().intValue());
+        }
+
+        List<DtoTeam> teams = teamsService.deserializationRanking(ranking, goalsDifferenceByTeam);
         messagingTemplate.convertAndSend("/simulation/table-update", teams);
     }
 
@@ -136,21 +151,34 @@ public class SimulationService {
         stringRedisTemplate.opsForZSet().add("table:live-bonus", teamName,pointsToAdd);
     }
 
+    public void saveTeamGoalDifferenceToBonusCache(String teamName, int goalsDifference)
+    {
+        stringRedisTemplate.opsForZSet().add("table:live-bonus-gd", teamName,goalsDifference);
+    }
+
     public void initializeOfficialTable()
     {
         teamsRepository.findAll().forEach(team ->
         {
             stringRedisTemplate.opsForZSet().add("table:official", team.getShortName(),team.getPoints());
+            stringRedisTemplate.opsForZSet().add("table:official-gd", team.getShortName(),team.getGoalsDifference());
         });
+        teamsService.initializeTeamCache();
     }
 
     @Transactional
     public void refreshMatchesDatabase(MatchDTOSim currentMatch) {
         matchesRepository.findById(currentMatch.getId()).ifPresent(match -> {
+            if (currentMatch.getStatus() == MatchStatus.LIVE && match.getStatus() == MatchStatus.SCHEDULED) {
+                incrementMatchesPlayed(match.getHomeTeam());
+                incrementMatchesPlayed(match.getAwayTeam());
+            }
+
             if (currentMatch.getStatus() == MatchStatus.FINISHED && match.getStatus() != MatchStatus.FINISHED) {
                 Pair<Integer,Integer> pointsToAdd = analyzeResult(currentMatch);
-                updatePoints(match.getHomeTeam(),pointsToAdd.getFirst());
-                updatePoints(match.getAwayTeam(),pointsToAdd.getSecond());
+                Pair<Integer,Integer> goalsDifferenceToAdd = analyzeGoalsDifference(currentMatch);
+                updateTeamStats(match.getHomeTeam(),pointsToAdd.getFirst(),goalsDifferenceToAdd.getFirst());
+                updateTeamStats(match.getAwayTeam(),pointsToAdd.getSecond(),goalsDifferenceToAdd.getSecond());
             }
 
             match.setStatus(currentMatch.getStatus());
@@ -175,9 +203,22 @@ public class SimulationService {
         }
     }
 
-    private void updatePoints(Team team, int points) {
+    private Pair<Integer,Integer> analyzeGoalsDifference(MatchDTOSim currentMatch) {
+        int homeGoals = currentMatch.getHomeTeamGoals();
+        int awayGoals = currentMatch.getAwayTeamGoals();
+        return Pair.of(homeGoals - awayGoals, awayGoals - homeGoals);
+    }
+
+    private void updateTeamStats(Team team, int points, int goalsDifferenceDelta) {
         team.setPoints(team.getPoints() + points);
+        team.setGoalsDifference(team.getGoalsDifference() + goalsDifferenceDelta);
         teamsRepository.save(team);
+    }
+
+    private void incrementMatchesPlayed(Team team) {
+        team.setMatchesPlayed(team.getMatchesPlayed() + 1);
+        teamsRepository.save(team);
+        teamsService.updateCachedMatchesPlayed(team.getShortName(), team.getMatchesPlayed());
     }
 
     public void startReplayForMatch(long matchId)
