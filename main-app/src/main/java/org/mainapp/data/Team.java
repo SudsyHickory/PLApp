@@ -18,6 +18,10 @@ public class Team {
 
     private int points;
 
+    private int goalsDifference;
+
+    private int matchesPlayed;
+
     @OneToMany(fetch = FetchType.LAZY,mappedBy = "homeTeam")
     @JsonIgnore
     private List<Match> matchesAsHomeTeam;
@@ -30,12 +34,32 @@ public class Team {
     public Team() {
     }
 
+    public Team(int points) {
+        this.points = points;
+    }
+
     public int getPoints() {
         return points;
     }
 
     public void setPoints(int points) {
         this.points = points;
+    }
+
+    public int getGoalsDifference() {
+        return goalsDifference;
+    }
+
+    public void setGoalsDifference(int goalsDifference) {
+        this.goalsDifference = goalsDifference;
+    }
+
+    public int getMatchesPlayed() {
+        return matchesPlayed;
+    }
+
+    public void setMatchesPlayed(int matchesPlayed) {
+        this.matchesPlayed = matchesPlayed;
     }
 
     public Long getId() {
