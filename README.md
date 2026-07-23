@@ -2,12 +2,12 @@
 
 A distributed, event-driven system designed to simulate football matches in real-time. This project focuses on handling high-throughput data streams, efficient caching strategies, and robust microservices communication.
 
-> **Note:** This is a **Backend-focused showcase**. The frontend is a minimal JavaScript implementation used only to visualize the real-time data flow and the **event-driven architecture** (Kafka, Redis, WebSockets).
+> **Note:** This project started as a **backend-focused showcase**. It now ships with a dedicated **React + Tailwind CSS** frontend that visualizes the real-time data flow and the **event-driven architecture** (Kafka, Redis, WebSockets) live in the browser.
 ---
 
 ## 🏗 Architecture & Data Flow
 
-The system consists of two main services orchestrated via **Docker**:
+The system consists of three main services orchestrated via **Docker**:
 
 ### 1. Main App
 - **Data Ingestion:** Fetches initial data (teams/fixtures) from the [football-data.org](https://www.football-data.org/) REST API.
@@ -20,6 +20,11 @@ The system consists of two main services orchestrated via **Docker**:
 - **Simulation:** Generates match events (minutes, goals, table updates).
 - **Parallelism:** Multiple instances work in parallel, processing different matches simultaneously.
 
+### 3. Frontend
+- **Live Dashboard:** A React SPA that renders matches, live scores, a goal-by-goal log, and the league table.
+- **REST + WebSocket Client:** Fetches initial state from Main App's REST API, then subscribes over **STOMP/WebSocket** (`/topic/match-logs`, `/simulation/match-update`, `/simulation/table-update`) to merge in live deltas without polling.
+- **Styling:** Built with **Tailwind CSS v4** for a responsive, dark-themed UI.
+
 ### Key Architectural Decisions
 * **Kafka Partitioning:** Events are produced with `matchId` as the message key. This guarantees that all events for a specific match are processed in chronological order by the same worker instance.
 * **Write-Behind Caching:** To minimize database overhead, match updates are cached in **Redis** and synchronized with **PostgreSQL** every 10 minutes or upon match completion.
@@ -29,15 +34,15 @@ The system consists of two main services orchestrated via **Docker**:
 
 ## 🛠 Tech Stack
 
-| Layer | Technology                              |
-| :--- |:----------------------------------------|
-| **Backend** | Java 21, Spring Boot 3, Spring Data JPA |
-| **Messaging** | Apache Kafka                            |
-| **Caching** | Redis (Hashes & Sorted Sets)            |
-| **Database** | PostgreSQL                              |
-| **Migrations** | Flyway                                  |
-| **DevOps** | Docker, Docker Compose                  |
-| **Frontend** | JavaScript                              |
+| Layer | Technology                                                         |
+| :--- |:-------------------------------------------------------------------|
+| **Backend** | Java 21, Spring Boot 4.0.3, Spring Data JPA                        |
+| **Messaging** | Apache Kafka                                                       |
+| **Caching** | Redis (Hashes & Sorted Sets)                                       |
+| **Database** | PostgreSQL                                                         |
+| **Migrations** | Flyway                                                             |
+| **DevOps** | Docker, Docker Compose                                             |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, STOMP (`@stomp/stompjs`) |
 
 ---
 
@@ -49,13 +54,15 @@ The system consists of two main services orchestrated via **Docker**:
   * `opsForZSet`: Maintaining a self-sorting live league table based on points.
 * **Database Versioning:** Full control over the schema through **Flyway** migrations, moving away from `hibernate.ddl-auto`.
 * **Reliability:** **Docker Healthchecks** ensuring the application starts only when PostgreSQL and Kafka are fully operational.
+* **Testing:** Unit, web, and integration test coverage (**JUnit 5**, **Mockito**, **Testcontainers**) for the simulation logic and Kafka/Redis interactions.
+* **Accurate Standings:** League table sorting handles tie-breaking by goal difference and matches played, not just points.
 
 ---
 ## 💻 Application Interface (Premier League Simulator)
 
 The image below showcases the live dashboard of the simulation:
 
-![Premier League Simulator Dashboard](image-2.png) 
+![Premier League Simulator Dashboard](image.png) 
 
 ### Key UI Components Explained:
 
@@ -83,14 +90,12 @@ The image below showcases the live dashboard of the simulation:
 3. **Run via Docker:**
     ```bash
    docker-compose up --build
-The Main App will be accessible at: http://localhost:8080
+This starts Postgres, Kafka, Redis, the Main App, 3 App-Worker replicas, and the Frontend.
+
+- Main App: http://localhost:8080
+- Frontend: http://localhost:5173
 
 ## 📈 Future Roadmap
 
-- [ ] **Comprehensive Testing Suite:**
-    - Implementation of unit tests for simulation logic (**JUnit 5**, **Mockito**).
-    - Integration tests for Kafka and Redis using **Testcontainers** to ensure environment consistency.
-- [ ] **Match Replay System:** 
-    - Leveraging **Kafka Streams** to allow replaying and analyzing match event topics
-- [ ] **Advanced Table Sorting:** 
-    - Enhance the Redis `ZSet` logic to handle tie-breaking rules, specifically sorting teams with equal points based on **Goal Difference** and goals scored.
+- [ ] **Frontend Testing:** Add a Vitest + React Testing Library suite for frontend components and hooks (currently no test setup on the frontend).
+- [ ] **Match Replay System:** Leveraging **Kafka Streams** to allow replaying and analyzing match event topics
