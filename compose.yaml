@@ -66,3 +66,11 @@ services:
     image: 'redis:latest'
     ports:
       - "6279:6379"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      simulation-app:
+        condition: service_started
